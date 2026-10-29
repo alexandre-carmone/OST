@@ -37,6 +37,12 @@ IndiModule::IndiModule(QString name, QString label, QString profile, QVariantMap
     createGlobLov("DRIVER_INTERFACE-DOME_INTERFACE", ls);
     ls = new OST::LovString("DRIVER_INTERFACE-AUX_INTERFACE");
     createGlobLov("DRIVER_INTERFACE-AUX_INTERFACE", ls);
+    ls = new OST::LovString("DRIVER_INTERFACE-LIGHTBOX_INTERFACE");
+    createGlobLov("DRIVER_INTERFACE-LIGHTBOX_INTERFACE", ls);
+    ls = new OST::LovString("DRIVER_INTERFACE-DUSTCAP_INTERFACE");
+    createGlobLov("DRIVER_INTERFACE-DUSTCAP_INTERFACE", ls);
+    ls = new OST::LovString("DRIVER_INTERFACE-ROTATOR_INTERFACE");
+    createGlobLov("DRIVER_INTERFACE-ROTATOR_INTERFACE", ls);
 
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &IndiModule::connectIndiTimer);
@@ -144,6 +150,9 @@ bool IndiModule::onExternalEventIndi(OST::ExtEvent event)
                     if (getProperty("devices")->getElts()->contains("gps")) getEltString("devices", "gps")->setValue("");
                     if (getProperty("devices")->getElts()->contains("dome")) getEltString("devices", "dome")->setValue("");
                     if (getProperty("devices")->getElts()->contains("weather")) getEltString("devices", "weather")->setValue("");
+                    if (getProperty("devices")->getElts()->contains("flatpanel")) getEltString("devices", "flatpanel")->setValue("");
+                    if (getProperty("devices")->getElts()->contains("dustcap")) getEltString("devices", "dustcap")->setValue("");
+                    if (getProperty("devices")->getElts()->contains("rotator")) getEltString("devices", "rotator")->setValue("");
                     QString camera = mGlobalDatastore->getGridString("equipments", "camera",    "name", equipmentName);
                     QString mount = mGlobalDatastore->getGridString("equipments", "mount",    "name", equipmentName);
                     QString focuser = mGlobalDatastore->getGridString("equipments", "focuser",    "name", equipmentName);
@@ -153,6 +162,9 @@ bool IndiModule::onExternalEventIndi(OST::ExtEvent event)
                     QString gps = mGlobalDatastore->getGridString("equipments", "gps",    "name", equipmentName);
                     QString dome = mGlobalDatastore->getGridString("equipments", "dome",    "name", equipmentName);
                     QString weather = mGlobalDatastore->getGridString("equipments", "weather",    "name", equipmentName);
+                    QString flatpanel = mGlobalDatastore->getGridString("equipments", "flatpanel",    "name", equipmentName);
+                    QString dustcap = mGlobalDatastore->getGridString("equipments", "dustcap",    "name", equipmentName);
+                    QString rotator = mGlobalDatastore->getGridString("equipments", "rotator",    "name", equipmentName);
                     QString hostport = mGlobalDatastore->getGridString("equipments", "host",    "name", equipmentName);
                     if (camera != "")
                         logInfo("Equipments: %1", {equipmentName});
@@ -168,6 +180,9 @@ bool IndiModule::onExternalEventIndi(OST::ExtEvent event)
                                 "guidecamera")->setValue(guidecamera);
                     if (getProperty("devices")->getElts()->contains("guidest4")) getEltString("devices", "guidest4")->setValue(guidest4);
                     if (getProperty("devices")->getElts()->contains("gps")) getEltString("devices", "gps")->setValue(gps);
+                    if (getProperty("devices")->getElts()->contains("flatpanel")) getEltString("devices", "flatpanel")->setValue(flatpanel);
+                    if (getProperty("devices")->getElts()->contains("dustcap")) getEltString("devices", "dustcap")->setValue(dustcap);
+                    if (getProperty("devices")->getElts()->contains("rotator")) getEltString("devices", "rotator")->setValue(rotator);
 
                     QString host = mGlobalDatastore->getGridString("servers", "host",    "name", hostport);
                     int port = mGlobalDatastore->getGridInt("servers", "port", "name", hostport);
@@ -997,6 +1012,9 @@ bool IndiModule::refreshDeviceslovs()
     getGlovString("DRIVER_INTERFACE-WEATHER_INTERFACE")->lovClear();
     getGlovString("DRIVER_INTERFACE-DOME_INTERFACE")->lovClear();
     getGlovString("DRIVER_INTERFACE-AUX_INTERFACE")->lovClear();
+    getGlovString("DRIVER_INTERFACE-LIGHTBOX_INTERFACE")->lovClear();
+    getGlovString("DRIVER_INTERFACE-DUSTCAP_INTERFACE")->lovClear();
+    getGlovString("DRIVER_INTERFACE-ROTATOR_INTERFACE")->lovClear();
 
 
     std::vector<INDI::BaseDevice> devs = getDevices();
@@ -1042,6 +1060,18 @@ bool IndiModule::refreshDeviceslovs()
             if (devs[i].getDriverInterface() & INDI::BaseDevice::DRIVER_INTERFACE::AUX_INTERFACE)
             {
                 getGlovString("DRIVER_INTERFACE-AUX_INTERFACE")->lovAdd(d, d);
+            }
+            if (devs[i].getDriverInterface() & INDI::BaseDevice::DRIVER_INTERFACE::LIGHTBOX_INTERFACE)
+            {
+                getGlovString("DRIVER_INTERFACE-LIGHTBOX_INTERFACE")->lovAdd(d, d);
+            }
+            if (devs[i].getDriverInterface() & INDI::BaseDevice::DRIVER_INTERFACE::DUSTCAP_INTERFACE)
+            {
+                getGlovString("DRIVER_INTERFACE-DUSTCAP_INTERFACE")->lovAdd(d, d);
+            }
+            if (devs[i].getDriverInterface() & INDI::BaseDevice::DRIVER_INTERFACE::ROTATOR_INTERFACE)
+            {
+                getGlovString("DRIVER_INTERFACE-ROTATOR_INTERFACE")->lovAdd(d, d);
             }
         }
     }
@@ -1398,6 +1428,15 @@ bool IndiModule::giveMeADevice(QString name, QString label, INDI::BaseDevice::DR
             break;
         case INDI::BaseDevice::DRIVER_INTERFACE::AUX_INTERFACE:
             s->setGlobalLov("DRIVER_INTERFACE-AUX_INTERFACE");
+            break;
+        case INDI::BaseDevice::DRIVER_INTERFACE::LIGHTBOX_INTERFACE:
+            s->setGlobalLov("DRIVER_INTERFACE-LIGHTBOX_INTERFACE");
+            break;
+        case INDI::BaseDevice::DRIVER_INTERFACE::DUSTCAP_INTERFACE:
+            s->setGlobalLov("DRIVER_INTERFACE-DUSTCAP_INTERFACE");
+            break;
+        case INDI::BaseDevice::DRIVER_INTERFACE::ROTATOR_INTERFACE:
+            s->setGlobalLov("DRIVER_INTERFACE-ROTATOR_INTERFACE");
             break;
         default:
             logWarning("%1 - unhandled interface type", {QString("giveMeADevice")});
