@@ -17,6 +17,8 @@
         default = ostserver;
       });
 
+      nixosModules.default = import ./nix/module.nix self;
+
       # `nix develop` gives a shell with every build dependency, for a
       # plain `cmake .. && make` in a build/ directory.
       devShells = forAllSystems (pkgs: {
