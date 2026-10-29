@@ -1,0 +1,50 @@
+{
+  "_doc": "Device referential, keyed by INDI driver binary. Only drivers whose capabilities differ from their devGroup default need an entry (see Controller::applyDeviceReferential). Fields: capabilities (camera, guider, mount, focuser, filter, gps, weather, dome, rotator, flatpanel, dustcap, power), multi (one driver may expose several devices), manufacturer (overrides drivers.xml), label + family (only for a binary with no drivers.xml entry).",
+
+  "indi_asi_ccd":        { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_asi_single_ccd": { "label": "ZWO Camera", "family": "CCDs", "manufacturer": "ZWO", "capabilities": ["camera", "guider"] },
+  "indi_asi_wheel":      { "capabilities": ["filter"], "multi": true },
+  "indi_asi_focuser":    { "capabilities": ["focuser"], "multi": true },
+  "indi_asi_rotator":    { "capabilities": ["rotator"], "multi": true },
+  "indi_asi_st4":        { "capabilities": ["guider"], "multi": true },
+
+  "indi_qhy_ccd":        { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_playerone_ccd":  { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_playerone_wheel":{ "capabilities": ["filter"], "multi": true },
+  "indi_toupcam_ccd":    { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_altaircam_ccd":  { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_omegonprocam_ccd": { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_svbony_ccd":     { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_atik_ccd":       { "capabilities": ["camera", "guider"], "multi": true },
+  "indi_sx_ccd":         { "capabilities": ["camera", "guider"], "multi": true },
+
+  "indi_simulator_ccd":   { "capabilities": ["camera", "guider"] },
+  "indi_simulator_guide": { "capabilities": ["camera", "guider"] },
+  "indi_simulator_gps":   { "capabilities": ["gps"] },
+  "indi_simulator_lightpanel": { "capabilities": ["flatpanel"] },
+  "indi_simulator_dustcover":  { "capabilities": ["dustcap"] },
+
+  "indi_lx200gps":       { "capabilities": ["mount", "gps"] },
+  "indi_celestron_gps":  { "capabilities": ["mount", "gps"] },
+
+  "indi_flipflat":       { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_snapcap":        { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_alto":           { "capabilities": ["dustcap"] },
+  "indi_giotto":         { "capabilities": ["flatpanel"] },
+  "indi_pegasus_flatmaster":      { "capabilities": ["flatpanel"] },
+  "indi_pegasus_flatmaster_neo":  { "capabilities": ["flatpanel"] },
+  "indi_pegasus_flatmaster_wifi": { "capabilities": ["flatpanel"] },
+  "indi_deepskydad_fp":  { "capabilities": ["flatpanel"] },
+  "indi_deepskydad_fr1": { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_wanderer_cover": { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_wanderercover_v4_ec":     { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_wanderercover_v4_pro_ec": { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_wanderer_eclipse": { "capabilities": ["dustcap"] },
+  "indi_wanderer_eta":   { "capabilities": ["flatpanel", "dustcap"] },
+  "indi_dragon_light":   { "capabilities": ["flatpanel"] },
+  "indi_gemini_flatpanel": { "capabilities": ["flatpanel", "dustcap"] },
+
+  "indi_arduinost4":     { "capabilities": ["guider"] },
+  "indi_gpusb":          { "capabilities": ["guider"] },
+  "indi_star2000":       { "capabilities": ["guider"] }
+}
