@@ -1068,6 +1068,10 @@ void Controller::processIndiError()
 
 void Controller::startPublish()
 {
+    connect(&zeroConf, &QZeroConf::error, this, [this](QZeroConf::error_t)
+    {
+        mLogger->warning("Zeroconf publication failed: is avahi-daemon running and allowing user service publishing?");
+    });
     zeroConf.clearServiceTxtRecords();
     zeroConf.addServiceTxtRecord("OstServer", "Observatoire Sans Tete");
     zeroConf.startServicePublish(QHostInfo::localHostName().toUtf8(), "_ostserver_ws._tcp", "local", 9624);
