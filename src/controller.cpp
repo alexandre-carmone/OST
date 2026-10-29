@@ -5,6 +5,9 @@
 #include <QFileInfo>
 #include <QHostInfo>
 #include <QDomDocument>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
 #include <QThread>
 #include <algorithm>
 #include <fcntl.h>
@@ -157,6 +160,9 @@ Controller::Controller(const QString &webroot, const QString &dbpath,
             m["binary"] = drv.binary;
             m["family"] = drv.family;
             m["mdpd"]   = drv.mdpd;
+            m["manufacturer"] = drv.manufacturer;
+            m["capabilities"] = drv.capabilities;
+            m["multi"]  = drv.multi;
             driverList.append(m);
         }
         updateControllerData("indidrivers", driverList);
@@ -995,6 +1001,7 @@ void Controller::checkIndiDrivers(void)
             {
                 QDomElement device = devices.at(j).toElement();
                 QString label    = device.attribute("label");
+                QString manufacturer = device.attribute("manufacturer");
                 QString skelAttr = device.attribute("skel");
                 bool    mdpd     = (device.attribute("mdpd") == "true");
 
@@ -1014,10 +1021,13 @@ void Controller::checkIndiDrivers(void)
                 info.family   = family;
                 info.skeleton = skeleton;
                 info.mdpd     = mdpd;
+                info.manufacturer = manufacturer;
                 _indiDrivers.append(info);
             }
         }
     }
+
+    applyDeviceReferential();
 
     std::sort(_indiDrivers.begin(), _indiDrivers.end(),
               [](const IndiDriverInfo & a, const IndiDriverInfo & b)
@@ -1026,6 +1036,69 @@ void Controller::checkIndiDrivers(void)
     });
 
     mLogger->info("Found " + QString::number(_indiDrivers.size()) + " INDI drivers");
+}
+// Device referential: what a driver provides, known before any device is
+// started or connected (the DRIVER_INTERFACE-* LOVs only list connected
+// devices). Default capabilities come from the drivers.xml devGroup; the
+// exceptions (multi-device drivers such as ZWO's, Auxiliary flat panels and
+// dust caps, cameras with a guide port...) are listed in src/indidevices.json.
+void Controller::applyDeviceReferential(void)
+{
+    static const QMap<QString, QString> familyDefault =
+    {
+        {"CCDs", "camera"}, {"Telescopes", "mount"}, {"Focusers", "focuser"},
+        {"Filter Wheels", "filter"}, {"Domes", "dome"}, {"Weather", "weather"},
+        {"Rotators", "rotator"}, {"Power", "power"}
+    };
+    for (auto &drv : _indiDrivers)
+    {
+        if (familyDefault.contains(drv.family))
+            drv.capabilities = QStringList(familyDefault[drv.family]);
+    }
+
+    QFile file(":indidevices.json");
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        mLogger->warning("Cannot open device referential :indidevices.json");
+        return;
+    }
+    QJsonObject ref = QJsonDocument::fromJson(file.readAll()).object();
+    file.close();
+
+    for (auto it = ref.begin(); it != ref.end(); ++it)
+    {
+        const QString binary = it.key();
+        if (binary.startsWith("_")) continue; // "_doc"
+        const QJsonObject entry = it.value().toObject();
+
+        QStringList capabilities;
+        for (const QJsonValue &c : entry["capabilities"].toArray()) capabilities << c.toString();
+        const bool multi = entry["multi"].toBool(false);
+        const QString manufacturer = entry["manufacturer"].toString();
+
+        bool found = false;
+        for (auto &drv : _indiDrivers)
+        {
+            if (drv.binary != binary) continue;
+            found = true;
+            if (!capabilities.isEmpty()) drv.capabilities = capabilities;
+            if (!manufacturer.isEmpty()) drv.manufacturer = manufacturer;
+            drv.multi = multi;
+        }
+        // A binary with no drivers.xml entry (e.g. indi_asi_single_ccd) is
+        // added to the catalogue, so that it is listed and YL can start it.
+        if (!found && entry.contains("label") && entry.contains("family"))
+        {
+            IndiDriverInfo info;
+            info.label        = entry["label"].toString();
+            info.binary       = binary;
+            info.family       = entry["family"].toString();
+            info.manufacturer = manufacturer;
+            info.capabilities = capabilities;
+            info.multi        = multi;
+            _indiDrivers.append(info);
+        }
+    }
 }
 void Controller::processFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
