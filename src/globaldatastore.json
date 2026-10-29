@@ -123,6 +123,27 @@
                 "order":"95",
                 "listOfValues":"DRIVER_INTERFACE-WEATHER_INTERFACE",
                 "autoupdate":true
+            },
+            "flatpanel": {
+                "type": "string",
+                "label": "Flat panel",
+                "order":"96",
+                "listOfValues":"DRIVER_INTERFACE-LIGHTBOX_INTERFACE",
+                "autoupdate":true
+            },
+            "dustcap": {
+                "type": "string",
+                "label": "Dust cap",
+                "order":"97",
+                "listOfValues":"DRIVER_INTERFACE-DUSTCAP_INTERFACE",
+                "autoupdate":true
+            },
+            "rotator": {
+                "type": "string",
+                "label": "Rotator",
+                "order":"98",
+                "listOfValues":"DRIVER_INTERFACE-ROTATOR_INTERFACE",
+                "autoupdate":true
             }
 
         }
