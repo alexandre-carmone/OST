@@ -80,6 +80,7 @@ class IndiModule : public Basemodule, public INDI::BaseClient
         bool createDeviceProperty(const QString &key, const QString &label, const QString &level1,
                                   const QString &level2, const QString &order, INDI::BaseDevice::DRIVER_INTERFACE interface);
         bool refreshDeviceslovs();
+        void resolveDevicePrefix(INDI::BaseDevice dp);
         bool defineMeAsFocuser();
         bool defineMeAsGuider();
         bool defineMeAsSequencer();

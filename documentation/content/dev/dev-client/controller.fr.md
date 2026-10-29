@@ -117,6 +117,8 @@ Rien dans INDI ne dit ce qu'un driver fournit avant qu'un de ses périphériques
 
 Les `capabilities` par défaut viennent du `devGroup` du driver (CCDs → `camera`, Telescopes → `mount`, Focusers → `focuser`, Filter Wheels → `filter`, Domes → `dome`, Weather → `weather`, Rotators → `rotator`, Power → `power`, le reste → rien). Les exceptions sont listées par binaire dans `src/indidevices.json` côté serveur : drivers multi-périphériques, caméras avec port d'autoguidage (`camera` + `guider`), panneaux à flat et caches du groupe Auxiliary, montures avec GPS... Une entrée peut aussi ajouter un driver absent de `drivers.xml` (il lui faut alors `label` et `family`). Pour ajouter ou corriger un driver, modifiez ce fichier.
 
+Un module dont `devices.<rôle>` contient un tel label nu le résout lui-même : quand apparaît un périphérique dont le nom commence par ce label suivi d'un espace, et qu'aucun périphérique ne porte exactement le nom enregistré, le module remplace la valeur par le nom réel (une mise à jour `p`/`e` suit, comme pour tout autre changement d'élément). Avec deux périphériques sous le même label, le premier à apparaître l'emporte ; enregistrez le label suivi du modèle pour en choisir un.
+
 ## Le module `GlobalDatastore` {#globaldatastore}
 
 `GlobalDatastore` est un module **comme les autres dans le dump** (`d.m.GlobalDatastore`, avec propriétés, éléments, grilles, profils), mais son rôle est central :

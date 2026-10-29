@@ -258,7 +258,35 @@ void IndiModule::newDevice(INDI::BaseDevice dp)
 {
     //logDebug("IndiModule::newDevice %1", {dp.getDeviceName()});
     refreshDeviceslovs();
+    resolveDevicePrefix(dp);
     onNewDevice(dp);
+}
+// A setup prepared without the hardware (setup wizard, device referential)
+// stores a bare driver label in devices.<x> ("ZWO CCD"), while the live
+// device of a multi-device driver is named label + " " + model ("ZWO CCD
+// ASI294MC Pro"). Every lookup here is by exact name, so the first new
+// device whose name starts with that label (and no device bears the exact
+// stored name) replaces it, through the normal update path so the front
+// sees the real name. Two devices sharing a prefix: the user disambiguates
+// by typing the model, which the wizard's "multi" hint asks for.
+void IndiModule::resolveDevicePrefix(INDI::BaseDevice dp)
+{
+    if (!getStore().contains("devices")) return;
+    const QString liveName = dp.getDeviceName();
+    const std::vector<INDI::BaseDevice> devs = getDevices();
+
+    OST::PropertyMulti* pm = getProperty("devices");
+    for (const QString &elt : pm->getElts()->keys())
+    {
+        if (elt == "equipments" || pm->getElt(elt)->getType() != "string") continue;
+        const QString stored = getEltString("devices", elt)->value();
+        if (stored.isEmpty() || !liveName.startsWith(stored + " ")) continue;
+        bool exact = false;
+        for (const auto &d : devs) if (stored == d.getDeviceName()) exact = true;
+        if (exact) continue;
+        logInfo("devices.%1: '%2' resolved to '%3'", {elt, stored, liveName});
+        getEltString("devices", elt)->setValue(liveName);
+    }
 }
 void IndiModule::removeDevice(INDI::BaseDevice dp)
 {

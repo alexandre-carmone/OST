@@ -117,6 +117,8 @@ Nothing in INDI says what a driver provides before one of its devices is started
 
 The default `capabilities` come from the driver's `devGroup` (CCDs → `camera`, Telescopes → `mount`, Focusers → `focuser`, Filter Wheels → `filter`, Domes → `dome`, Weather → `weather`, Rotators → `rotator`, Power → `power`, anything else → none). The exceptions are listed by binary in `src/indidevices.json` on the server side: multi-device drivers, cameras with a guide port (`camera` + `guider`), Auxiliary flat panels and dust caps, mounts with a GPS... An entry there may also add a driver that has no `drivers.xml` entry at all (it then needs `label` and `family`). To add or fix a driver, edit that file.
 
+A module whose `devices.<role>` holds such a bare label resolves it by itself: when a device appears whose name starts with that label followed by a space, and no device bears the exact stored name, the module replaces the value with the live name (a `p`/`e` update follows, like any other element change). With two devices under the same label, the first one to appear wins; store the label plus the model to pick one.
+
 ## The `GlobalDatastore` module {#globaldatastore}
 
 `GlobalDatastore` is a module **like any other in the dump** (`d.m.GlobalDatastore`, with properties, elements, grids, profiles), but its role is central:
