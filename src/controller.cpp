@@ -946,7 +946,9 @@ void Controller::checkModules(void)
 }
 void Controller::checkIndiDrivers(void)
 {
-    const QString path = "/usr/share/indi";
+    // Debian/Arch/Fedora all put the driver XML files in /usr/share/indi;
+    // NixOS has no /usr/share, so let the package point at its own copy.
+    const QString path = qEnvironmentVariable("OST_INDI_DRIVERS_DIR", "/usr/share/indi");
     mLogger->info("Scanning INDI drivers in " + path);
     _indiDrivers.clear();
 
