@@ -185,20 +185,65 @@ function renderOpticsStep(client, container, setValid, wizardSelection) {
 
 // ---- Step 3: equipment / device assignment --------------------------------
 // GlobalDatastore's own "equipments" grid - each device-role column
-// (camera/mount/focuser/filter/guidecamera/guidest4/gps/dome/weather)
-// already carries its own listOfValues pointing at the right
-// DRIVER_INTERFACE-* global LOV (populated from whatever INDI devices are
-// actually detected, see giveMeADevice()/defineMeAsXXX(), libs/indimodule.cpp),
-// and buildElementsForm() already renders a LOV-constrained string element
-// as a dropdown (render.js) - so this step gets the "pick from detected
-// devices" behaviour for free, same as step 2, no new logic needed for it.
+// (camera/mount/focuser/filter/guidecamera/guidest4/gps/dome/weather/
+// flatpanel/dustcap/rotator) carries its own listOfValues pointing at the
+// right DRIVER_INTERFACE-* global LOV, which only lists devices that are
+// actually CONNECTED (refreshDeviceslovs(), libs/indimodule.cpp). To let a
+// setup be prepared with nothing plugged in, the form's suggestions are
+// completed from the device referential (controllerdata.indidrivers'
+// capabilities/multi, see dev-client/controller.*.md "Device referential"):
+// one suggestion per driver able to fill the column, valued by its label
+// ("ZWO CCD"). The field stays free text, so a "multi" driver's label can
+// be completed by hand with the model ("ZWO CCD ASI294MC Pro").
 function renderEquipmentStep(client, container, setValid, wizardSelection) {
   return renderSimpleGridStep(client, container, setValid, wizardSelection, {
     propName: "equipments",
     introKey: "wizard.equipment.intro",
     addLabelKey: "wizard.equipment.add",
     rowLabel: (row) => row.name || "—",
+    elementsHook: (elements) => withReferentialSuggestions(client, elements),
   });
+}
+
+// Referential capability -> "equipments" columns it can fill.
+const CAPABILITY_COLUMNS = {
+  camera: ["camera", "guidecamera"],
+  guider: ["guidest4"],
+  mount: ["mount"],
+  focuser: ["focuser"],
+  filter: ["filter"],
+  gps: ["gps"],
+  weather: ["weather"],
+  dome: ["dome"],
+  flatpanel: ["flatpanel"],
+  dustcap: ["dustcap"],
+  rotator: ["rotator"],
+};
+
+// Returns a copy of the "equipments" element defs where each device column
+// carries an inline listOfValues ([value, label] pairs, the form resolveLov()
+// already accepts): the live LOV entries first, then the referential's
+// drivers for that capability.
+function withReferentialSuggestions(client, elements) {
+  const drivers = client.get(client.topics.controllerData("indidrivers")) || [];
+  const out = { ...elements };
+  for (const [capability, columns] of Object.entries(CAPABILITY_COLUMNS)) {
+    for (const col of columns) {
+      const def = elements[col];
+      if (!def) continue;
+      const pairs = Object.entries(client.resolveLov("GlobalDatastore", def) || {});
+      const seen = new Set(pairs.map(([value]) => value));
+      for (const d of drivers) {
+        if (!(d.capabilities || []).includes(capability) || seen.has(d.label)) continue;
+        seen.add(d.label);
+        let label = d.manufacturer ? `${d.label} — ${d.manufacturer}` : d.label;
+        if (d.multi) label += ` (${t("wizard.equipment.multi")})`;
+        pairs.push([d.label, label]);
+      }
+      out[col] = { ...def, listOfValues: pairs };
+    }
+  }
+  return out;
 }
 
 // ---- Step 4: location ------------------------------------------------------
@@ -222,8 +267,10 @@ function renderLocationStep(client, container, setValid, wizardSelection) {
 // defs, and a radio pick for 'the one to use' (Gilles, 2026-10-14: "je veux
 // pouvoir faire une selection ... dont il faut tenir compte au 5" - read
 // back from wizardSelection[propName] by step 5), done once there is at
-// least one row" with nothing else different between them.
-function renderSimpleGridStep(client, container, setValid, wizardSelection, { propName, introKey, addLabelKey, rowLabel }) {
+// least one row" with nothing else different between them. `elementsHook`
+// (optional) lets a step adjust the element defs the "Add" form is built
+// from (step 3 completes the device columns' suggestions).
+function renderSimpleGridStep(client, container, setValid, wizardSelection, { propName, introKey, addLabelKey, rowLabel, elementsHook }) {
   const scope = client.scope();
   container.appendChild(el("p", { class: "muted small", text: t(introKey) }));
   const list = el("ul", { class: "wizard-select-list" });
@@ -238,7 +285,8 @@ function renderSimpleGridStep(client, container, setValid, wizardSelection, { pr
     if (!prop) return;
     formSlot.innerHTML = "";
     formSlot.classList.remove("hidden");
-    const form = buildElementsForm(client, "GlobalDatastore", prop.elements, prop.gridheaders || [], {});
+    const elements = elementsHook ? elementsHook(prop.elements) : prop.elements;
+    const form = buildElementsForm(client, "GlobalDatastore", elements, prop.gridheaders || [], {});
     formSlot.appendChild(form.node);
     formSlot.appendChild(el("div", { class: "form-row" }, [
       el("button", { class: "btn btn-sm", text: t("common.cancel"), onclick: () => formSlot.classList.add("hidden") }),
