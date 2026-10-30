@@ -19,7 +19,7 @@ Le contrôleur est le composant du serveur qui charge les modules et pilote le s
 | `libraries` | Bibliothèques de modules disponibles, un objet de métadonnées par bibliothèque — les clés sont **préfixées par `libost`** (`libostfocus`, `libostdummy`...) ; retirer ce préfixe avant de le passer à [`ML`]({{% relref "client-messages.fr.md" %}}#ml) |
 | `profiles` | Profils disponibles : objet `nom de bibliothèque transformé → liste de noms de profils` — voir la convention de clé ci-dessous |
 | `indiserver` | `"N"` si le serveur INDI embarqué est désactivé (`--indiserver`) ; sinon `"U"` une fois son démarrage confirmé, `"D"` une fois qu'il ne l'est plus (échec au démarrage, plantage, ou arrêt) |
-| `indidrivers` | Catalogue des drivers INDI installés : liste de `{binary, family, label, mdpd}` |
+| `indidrivers` | Catalogue des drivers INDI installés : liste de `{binary, family, label, mdpd, manufacturer, capabilities, multi}` — voir [Référentiel des périphériques](#device-referential) |
 | `indiactivedrivers` | Drivers INDI actuellement lancés |
 | `indiconfigurations` | Configurations de drivers INDI sauvegardées : objet `nom de configuration → liste de libellés de drivers` |
 | `systemwatcher` | Charge du serveur, voir plus bas |
@@ -71,6 +71,7 @@ Le serveur mesure sa propre charge à intervalle régulier et la diffuse à tous
 `disks`, `network` et surtout `temperatures` peuvent être vides. Un client doit masquer la section correspondante plutôt que d'afficher un tableau vide. Le protocole ne donne pas le nombre de cœurs du serveur : une jauge de CPU ne peut donc pas être un vrai pourcentage, il faut afficher la valeur comme une charge.
 {{% /notice %}}
 
+
 ## Configurations et cycle de vie des modules
 
 Une **configuration** est un ensemble nommé de modules (bibliothèque, libellé, profil) que le serveur peut recharger d'un coup. La liste est dans `controllerdata.availableconfs`, la configuration active dans `controllerdata.currentconf`.
@@ -96,13 +97,27 @@ Il n'existe aucune commande pour supprimer une configuration sauvegardée — `C
 
 Sauf si `controllerdata.indiserver` vaut `"N"`, le serveur pilote une instance INDI embarquée. Les commandes [`YA`/`YZ`/`YL`/`YR`/`YS`]({{% relref "client-messages.fr.md" %}}#indi) la démarrent, l'arrêtent et gèrent les drivers ; `controllerdata.indidrivers` donne le catalogue disponible et `controllerdata.indiactivedrivers` ce qui tourne. `binary` est la valeur à passer comme `driver` dans `YL`, `YR` et `YS`.
 
-`controllerdata.indidrivers` et `controllerdata.indiactivedrivers` sont tous deux des listes d'objets `{binary, family, label}` (`indidrivers` a en plus `mdpd`, voir le tableau ci-dessus).
+`controllerdata.indidrivers` et `controllerdata.indiactivedrivers` sont tous deux des listes d'objets `{binary, family, label}` (`indidrivers` a en plus `mdpd`, `manufacturer`, `capabilities` et `multi`, voir le tableau ci-dessus et le [référentiel des périphériques](#device-referential) ci-dessous).
 
 Tout un ensemble de drivers sauvegardé peut être démarré d'un coup avec [`YK`]({{% relref "client-messages.fr.md" %}}#indi), par son nom, depuis `controllerdata.indiconfigurations` — sauvegardé par `CS` en même temps qu'une configuration de modules (voir l'avertissement ci-dessus), mais chargeable seul, indépendamment de `CL`.
 
 {{% notice style="warning" title="YA/YZ/YL/YR/YS/YK n'ont pas d'accusé de réception dédié" %}}
 Aucune de ces commandes ne déclenche de message de confirmation propre. Le succès ou l'échec doit être déduit indirectement : `YL`/`YR`/`YS`/`YK` sont suivis d'une mise à jour `uc` de `indiactivedrivers` reflétant le changement demandé (mais cela confirme seulement que le serveur l'a *tenté*, pas que le driver INDI sous-jacent a réellement démarré), tandis que `YA`/`YZ` ne produisent aucun `uc` — seulement des messages `l` (log), destinés à un humain, pas à être analysés par un client. `controllerdata.indiserver` suit bien en direct l'état réel (en service/arrêté) du serveur embarqué (voir le tableau ci-dessus), mais c'est un effet de bord de `YA`/`YZ`/un plantage, pas un accusé de réception direct de la commande qui l'a causé.
 {{% /notice %}}
+
+### Référentiel des périphériques {#device-referential}
+
+Rien dans INDI ne dit ce qu'un driver fournit avant qu'un de ses périphériques soit démarré **et connecté** (les LOV `DRIVER_INTERFACE-*` ne listent que les périphériques connectés, et `family` est le `devGroup` grossier d'INDI — "Auxiliary" regroupe panneaux à flat, caches, GPS...). Pour qu'un client puisse construire un setup sans le matériel branché, chaque entrée de `indidrivers` porte aussi :
+
+| Champ | Contenu |
+|---|---|
+| `manufacturer` | Issu de `drivers.xml` (attribut `manufacturer`), peut être vide |
+| `capabilities` | Liste de ce que le driver fournit, parmi `camera`, `guider` (port ST4/autoguidage), `mount`, `focuser`, `filter`, `gps`, `weather`, `dome`, `rotator`, `flatpanel`, `dustcap`, `power`. Vide si inconnu |
+| `multi` | `true` quand un seul driver peut exposer **plusieurs périphériques** à la fois (ZWO, QHY, Player One...). Les noms de périphériques réels sont alors `label + " " + modèle` (ex. `ZWO CCD ASI294MC Pro`) : un client qui enregistre le simple `label` avant que le matériel soit connecté doit laisser l'utilisateur le compléter avec le modèle quand deux périphériques partagent le même driver |
+
+Les `capabilities` par défaut viennent du `devGroup` du driver (CCDs → `camera`, Telescopes → `mount`, Focusers → `focuser`, Filter Wheels → `filter`, Domes → `dome`, Weather → `weather`, Rotators → `rotator`, Power → `power`, le reste → rien). Les exceptions sont listées par binaire dans `src/indidevices.json` côté serveur : drivers multi-périphériques, caméras avec port d'autoguidage (`camera` + `guider`), panneaux à flat et caches du groupe Auxiliary, montures avec GPS... Une entrée peut aussi ajouter un driver absent de `drivers.xml` (il lui faut alors `label` et `family`). Pour ajouter ou corriger un driver, modifiez ce fichier.
+
+Un module dont `devices.<rôle>` contient un tel label nu le résout lui-même : quand apparaît un périphérique dont le nom commence par ce label suivi d'un espace, et qu'aucun périphérique ne porte exactement le nom enregistré, le module remplace la valeur par le nom réel (une mise à jour `p`/`e` suit, comme pour tout autre changement d'élément). Avec deux périphériques sous le même label, le premier à apparaître l'emporte ; enregistrez le label suivi du modèle pour en choisir un.
 
 ## Le module `GlobalDatastore` {#globaldatastore}
 

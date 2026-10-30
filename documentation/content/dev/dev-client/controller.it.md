@@ -19,7 +19,7 @@ Il controller è il componente del server che carica i moduli e pilota il server
 | `libraries` | Librerie di moduli disponibili, un oggetto di metadati per libreria — le chiavi sono **con prefisso `libost`** (`libostfocus`, `libostdummy`...); rimuoverlo prima di passarlo a [`ML`]({{% relref "client-messages.it.md" %}}#ml) |
 | `profiles` | Profili disponibili: oggetto `nome libreria trasformato → elenco di nomi di profilo` — vedi la convenzione di chiave qui sotto |
 | `indiserver` | `"N"` se il server INDI integrato è disattivato (`--indiserver`); altrimenti `"U"` una volta confermato in esecuzione, `"D"` una volta che non lo è più (avvio fallito, crash, o arresto) |
-| `indidrivers` | Catalogo dei driver INDI installati: elenco di `{binary, family, label, mdpd}` |
+| `indidrivers` | Catalogo dei driver INDI installati: elenco di `{binary, family, label, mdpd, manufacturer, capabilities, multi}` — vedi [Referenziale dei dispositivi](#device-referential) |
 | `indiactivedrivers` | Driver INDI attualmente avviati |
 | `indiconfigurations` | Configurazioni di driver INDI salvate: oggetto `nome della configurazione → elenco di etichette driver` |
 | `systemwatcher` | Carico del server, vedi più avanti |
@@ -71,6 +71,7 @@ Il server misura il proprio carico a intervalli regolari e lo diffonde a tutti i
 `disks`, `network` e soprattutto `temperatures` possono essere vuoti. Un client deve nascondere la sezione corrispondente invece di mostrare una tabella vuota. Il protocollo non fornisce il numero di core del server: un indicatore di CPU non può quindi essere una vera percentuale, il valore va mostrato come carico.
 {{% /notice %}}
 
+
 ## Configurazioni e ciclo di vita dei moduli
 
 Una **configurazione** è un insieme denominato di moduli (libreria, etichetta, profilo) che il server può ricaricare in un colpo solo. L'elenco si trova in `controllerdata.availableconfs`, la configurazione attiva in `controllerdata.currentconf`.
@@ -96,13 +97,17 @@ Non esiste alcun comando per rimuovere una configurazione salvata — `CL` e `CS
 
 A meno che `controllerdata.indiserver` non valga `"N"`, il server pilota un'istanza INDI integrata. I comandi [`YA`/`YZ`/`YL`/`YR`/`YS`]({{% relref "client-messages.it.md" %}}#indi) la avviano, la arrestano e gestiscono i driver; `controllerdata.indidrivers` fornisce il catalogo disponibile e `controllerdata.indiactivedrivers` ciò che è in esecuzione. `binary` è il valore da passare come `driver` in `YL`, `YR` e `YS`.
 
-`controllerdata.indidrivers` e `controllerdata.indiactivedrivers` sono entrambi elenchi di oggetti `{binary, family, label}` (`indidrivers` ha in più `mdpd`, vedi la tabella sopra).
+`controllerdata.indidrivers` e `controllerdata.indiactivedrivers` sono entrambi elenchi di oggetti `{binary, family, label}` (`indidrivers` ha in più `mdpd`, `manufacturer`, `capabilities` e `multi`, vedi la tabella sopra e il [referenziale dei dispositivi](#device-referential) sotto).
 
 Un intero insieme di driver salvato può essere avviato in un colpo solo con [`YK`]({{% relref "client-messages.it.md" %}}#indi), per nome, da `controllerdata.indiconfigurations` — salvato da `CS` insieme a una configurazione di moduli (vedi l'avviso sopra), ma caricabile anche da solo, indipendentemente da `CL`.
 
 {{% notice style="warning" title="YA/YZ/YL/YR/YS/YK non hanno una conferma dedicata" %}}
 Nessuno di questi comandi genera un proprio messaggio di conferma. Successo o fallimento vanno dedotti indirettamente: `YL`/`YR`/`YS`/`YK` sono seguiti da un aggiornamento `uc` di `indiactivedrivers` che riflette la modifica richiesta (ma questo conferma solo che il server ci ha *provato*, non che il driver INDI sottostante sia effettivamente partito), mentre `YA`/`YZ` non producono alcun `uc` — solo messaggi `l` (log), pensati per un umano, non per essere analizzati programmaticamente da un client. `controllerdata.indiserver` traccia effettivamente in diretta lo stato attivo/inattivo del server integrato (vedi la tabella sopra), ma questo è un effetto collaterale di `YA`/`YZ`/di un crash, non una conferma diretta del comando che lo ha causato.
 {{% /notice %}}
+
+### Referenziale dei dispositivi {#device-referential}
+
+INDI non dice cosa fornisce un driver prima che uno dei suoi dispositivi sia avviato **e connesso**. Perché un client possa costruire un setup senza l'hardware collegato, ogni voce di `indidrivers` porta anche `manufacturer` (da `drivers.xml`), `capabilities` (elenco tra `camera`, `guider`, `mount`, `focuser`, `filter`, `gps`, `weather`, `dome`, `rotator`, `flatpanel`, `dustcap`, `power`) e `multi` (`true` quando un solo driver può esporre **più dispositivi** insieme, es. ZWO; i nomi reali sono allora `label + " " + modello`). I valori predefiniti vengono dal `devGroup`, le eccezioni sono elencate lato server in `src/indidevices.json`.
 
 ## Il modulo `GlobalDatastore` {#globaldatastore}
 

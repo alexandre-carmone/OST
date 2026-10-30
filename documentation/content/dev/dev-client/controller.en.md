@@ -19,7 +19,7 @@ The controller is the server component that loads the modules and drives the emb
 | `libraries` | Available module libraries, one metadata object per library — keys are **prefixed with `libost`** (`libostfocus`, `libostdummy`...); strip it before passing to [`ML`]({{% relref "client-messages.en.md" %}}#ml) |
 | `profiles` | Available profiles: object `transformed library name → list of profile names` — see the keying convention below |
 | `indiserver` | `"N"` if the embedded INDI server is disabled (`--indiserver`); otherwise `"U"` once it is confirmed running, `"D"` once it isn't (startup fails, crashes, or is stopped) |
-| `indidrivers` | Catalogue of installed INDI drivers: list of `{binary, family, label, mdpd}` |
+| `indidrivers` | Catalogue of installed INDI drivers: list of `{binary, family, label, mdpd, manufacturer, capabilities, multi}` — see [Device referential](#device-referential) |
 | `indiactivedrivers` | INDI drivers currently running |
 | `indiconfigurations` | Saved INDI driver configurations: object `configuration name → list of driver labels` |
 | `systemwatcher` | Server load, see below |
@@ -71,6 +71,7 @@ The server measures its own load at regular intervals and broadcasts it to all c
 `disks`, `network` and especially `temperatures` can be empty. A client should hide the corresponding section rather than display an empty array. The protocol does not provide the server's number of cores: a CPU gauge therefore cannot be a real percentage, the value has to be shown as a load.
 {{% /notice %}}
 
+
 ## Configurations and module lifecycle
 
 A **configuration** is a named set of modules (library, label, profile) that the server can reload in one go. The list is in `controllerdata.availableconfs`, the active configuration in `controllerdata.currentconf`.
@@ -96,13 +97,27 @@ There is no command to remove a saved configuration — `CL` and `CS` are the on
 
 Unless `controllerdata.indiserver` is `"N"`, the server drives an embedded INDI instance. The [`YA`/`YZ`/`YL`/`YR`/`YS`]({{% relref "client-messages.en.md" %}}#indi) commands start it, stop it and manage the drivers; `controllerdata.indidrivers` gives the available catalogue and `controllerdata.indiactivedrivers` what is running. `binary` is the value to pass as `driver` in `YL`, `YR` and `YS`.
 
-`controllerdata.indidrivers` and `controllerdata.indiactivedrivers` are both lists of objects `{binary, family, label}` (`indidrivers` additionally has `mdpd`, see the table above).
+`controllerdata.indidrivers` and `controllerdata.indiactivedrivers` are both lists of objects `{binary, family, label}` (`indidrivers` additionally has `mdpd`, `manufacturer`, `capabilities` and `multi`, see the table above and the [device referential](#device-referential) below).
 
 A whole saved set of drivers can be started in one go with [`YK`]({{% relref "client-messages.en.md" %}}#indi), by name, from `controllerdata.indiconfigurations` — saved by `CS` alongside a module configuration (see the warning above), but loadable on its own, independently of `CL`.
 
 {{% notice style="warning" title="YA/YZ/YL/YR/YS/YK have no dedicated acknowledgment" %}}
 None of these commands trigger a confirmation message of their own. Success or failure has to be inferred indirectly: `YL`/`YR`/`YS`/`YK` are followed by a `uc` update of `indiactivedrivers` reflecting the requested change (but this only confirms the server *attempted* it, not that the underlying INDI driver actually came up), while `YA`/`YZ` produce no `uc` at all — only `l` (log) messages, which are meant for a human, not for a client to parse programmatically. `controllerdata.indiserver` does track the embedded server's own up/down state live (see the table above), but that is a side effect of `YA`/`YZ`/a crash, not a direct acknowledgment of the command that caused it.
 {{% /notice %}}
+
+### Device referential {#device-referential}
+
+Nothing in INDI says what a driver provides before one of its devices is started **and connected** (the `DRIVER_INTERFACE-*` LOVs only list connected devices, and `family` is INDI's coarse `devGroup` — "Auxiliary" covers flat panels, dust caps, GPS...). To let a client build a setup without the hardware plugged in, every `indidrivers` entry also carries:
+
+| Field | Content |
+|---|---|
+| `manufacturer` | From `drivers.xml` (`manufacturer` attribute), may be empty |
+| `capabilities` | List of what the driver provides, among `camera`, `guider` (ST4/guide port), `mount`, `focuser`, `filter`, `gps`, `weather`, `dome`, `rotator`, `flatpanel`, `dustcap`, `power`. Empty when unknown |
+| `multi` | `true` when one driver can expose **several devices** at once (ZWO, QHY, Player One...). The live device names are then `label + " " + model` (e.g. `ZWO CCD ASI294MC Pro`), so a client that stores the bare `label` before the hardware is connected must expect the user to complete it with the model when two devices share the same driver |
+
+The default `capabilities` come from the driver's `devGroup` (CCDs → `camera`, Telescopes → `mount`, Focusers → `focuser`, Filter Wheels → `filter`, Domes → `dome`, Weather → `weather`, Rotators → `rotator`, Power → `power`, anything else → none). The exceptions are listed by binary in `src/indidevices.json` on the server side: multi-device drivers, cameras with a guide port (`camera` + `guider`), Auxiliary flat panels and dust caps, mounts with a GPS... An entry there may also add a driver that has no `drivers.xml` entry at all (it then needs `label` and `family`). To add or fix a driver, edit that file.
+
+A module whose `devices.<role>` holds such a bare label resolves it by itself: when a device appears whose name starts with that label followed by a space, and no device bears the exact stored name, the module replaces the value with the live name (a `p`/`e` update follows, like any other element change). With two devices under the same label, the first one to appear wins; store the label plus the model to pick one.
 
 ## The `GlobalDatastore` module {#globaldatastore}
 

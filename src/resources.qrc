@@ -8,5 +8,6 @@
         <file>sh2.txt</file>
         <file>stars.txt</file>
 		<file>loginpage.json</file>
+		<file>indidevices.json</file>
     </qresource>
 </RCC>

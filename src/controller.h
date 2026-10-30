@@ -22,6 +22,9 @@ struct IndiDriverInfo
     QString family;
     QString skeleton;
     bool    mdpd = false;
+    QString     manufacturer;
+    QStringList capabilities; // see src/indidevices.json
+    bool        multi = false; // one driver can expose several devices
 };
 
 /*!
@@ -85,6 +88,7 @@ class Controller : public QObject
         void loadIndiConfiguration(const QString &pConf);
         void checkModules(void);
         void checkIndiDrivers(void);
+        void applyDeviceReferential(void);
         void processOutput();
         void processError();
         void processIndiOutput();
