@@ -946,7 +946,9 @@ void Controller::checkModules(void)
 }
 void Controller::checkIndiDrivers(void)
 {
-    const QString path = "/usr/share/indi";
+    // Debian/Arch/Fedora all put the driver XML files in /usr/share/indi;
+    // NixOS has no /usr/share, so let the package point at its own copy.
+    const QString path = qEnvironmentVariable("OST_INDI_DRIVERS_DIR", "/usr/share/indi");
     mLogger->info("Scanning INDI drivers in " + path);
     _indiDrivers.clear();
 
@@ -1066,6 +1068,10 @@ void Controller::processIndiError()
 
 void Controller::startPublish()
 {
+    connect(&zeroConf, &QZeroConf::error, this, [this](QZeroConf::error_t)
+    {
+        mLogger->warning("Zeroconf publication failed: is avahi-daemon running and allowing user service publishing?");
+    });
     zeroConf.clearServiceTxtRecords();
     zeroConf.addServiceTxtRecord("OstServer", "Observatoire Sans Tete");
     zeroConf.startServicePublish(QHostInfo::localHostName().toUtf8(), "_ostserver_ws._tcp", "local", 9624);

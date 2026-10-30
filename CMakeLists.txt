@@ -626,17 +626,17 @@ set(OST_RUNTIME_TARGETS
 )
 
 install(TARGETS ${OST_RUNTIME_TARGETS}
-    RUNTIME DESTINATION "/usr/bin"     COMPONENT Runtime
-    LIBRARY DESTINATION "/usr/lib"     COMPONENT Runtime
-    PUBLIC_HEADER DESTINATION "/usr/include/ost" COMPONENT Development
+    RUNTIME DESTINATION "bin"         COMPONENT Runtime
+    LIBRARY DESTINATION "lib"         COMPONENT Runtime
+    PUBLIC_HEADER DESTINATION "include/ost" COMPONENT Development
 )
 
 # Same binaries again, under the "Complete" component - see
 # cmake/cpack/DebianPackage.cmake. No PUBLIC_HEADER here: a beginner
 # installing the all-in-one package has no use for module dev headers.
 install(TARGETS ${OST_RUNTIME_TARGETS}
-    RUNTIME DESTINATION "/usr/bin" COMPONENT Complete
-    LIBRARY DESTINATION "/usr/lib" COMPONENT Complete
+    RUNTIME DESTINATION "bin" COMPONENT Complete
+    LIBRARY DESTINATION "lib" COMPONENT Complete
 )
 
 install(

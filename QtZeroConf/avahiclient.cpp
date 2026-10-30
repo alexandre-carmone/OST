@@ -237,6 +237,10 @@ void QZeroConf::startServicePublish(const char *name, const char *type, const ch
 	}
 
 	pri->group = avahi_entry_group_new(pri->client, QZeroConfPrivate::groupCallback, pri);
+	if (!pri->group) {  // e.g. avahi-daemon runs with disable-user-service-publishing=yes
+		emit error(QZeroConf::serviceRegistrationFailed);
+		return;
+	}
 
 	int ret = avahi_entry_group_add_service_strlst(pri->group, interface, AVAHI_PROTO_UNSPEC, AVAHI_PUBLISH_UPDATE, name, type, domain, NULL, port, pri->txt);
 	if (ret < 0) {

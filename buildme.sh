@@ -48,4 +48,4 @@ mkdir build
 cd build
 cmake ..
 make -j"$(nproc)"
-# sudo cmake --install . --prefix=/
+# sudo cmake --install . --prefix=/usr

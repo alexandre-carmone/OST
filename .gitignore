@@ -82,3 +82,7 @@ documentation/public/
 documentation/resources/
 documentation/.hugo_build.lock
 documentation/documentation_latest.tar.gz
+
+# Nix build output
+result
+result-*
